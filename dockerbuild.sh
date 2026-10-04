@@ -2,6 +2,7 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-IMAGE=${1:-vim/598ape}
+IMAGE=${1:-pradyun2/598ape}
 
-docker build -t "$IMAGE" -f "$SCRIPT_DIR/docker/Dockerfile" "$SCRIPT_DIR/docker"
+cd $SCRIPT_DIR/docker
+docker build -t "$IMAGE" .

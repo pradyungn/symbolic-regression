@@ -6,6 +6,7 @@ RUN apt-get -y update && apt-get install -y --no-install-recommends curl gnupg s
     && curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key|apt-key add - \
     && apt-add-repository "deb http://apt.llvm.org/`lsb_release -c | cut -f2`/ llvm-toolchain-`lsb_release -c | cut -f2`-19 main" \
     && apt-get install -y --no-install-recommends autoconf cmake ninja-build gcc g++ linux-tools-common linux-tools-generic libtool llvm-19-dev lld-19 clang-19 libomp-19-dev libopenmpi-dev openmpi-bin git make imagemagick ffmpeg \
+        linux-tools-$(uname -r) clangd \
         racket libglib2.0-0t64 libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libjpeg-turbo8 libpng16-16t64 \
     && apt-get autoremove -y --purge \
     && apt-get clean -y \
