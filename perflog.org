@@ -9,6 +9,7 @@ One-shot runtimes, so can be noisy.
 | Hoist Stack Creation  |    7.605 |  60.43 |  90.872 |         |          |
 | OMP Parallel in kexec |    2.349 | 34.435 |  28.022 |   58.36 |          |
 | change sort to runmin |    2.227 |  21.93 |  27.295 |    57.8 |          |
+| actually add O3       |   0.4916 |  7.963 |   7.015 |   15.67 |          |
 
 After OMP, reduction on Cancer was /not linear/ -- something weird may be going on with our parallelism. check flame graph to see where the overhead goes! 
 
