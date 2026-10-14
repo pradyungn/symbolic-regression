@@ -18,22 +18,24 @@ namespace genetic {
  * Execution kernel for a single program. We assume that the input data
  * is stored in column major format.
  */
-template <int MaxSize = MAX_STACK_SIZE>
-void execute_kernel(const program_t d_progs, const float *data, float *y_pred,
-                    const uint64_t n_rows, const uint64_t n_progs) {
+void execute(const program_t &d_progs, const int n_rows,
+            const int n_progs, const float *data, float *y_pred) {
+  uint64_t cnprog = static_cast<uint64_t>(n_progs);
+  uint64_t cnrows = static_cast<uint64_t>(n_rows);
+
+  uint64_t points = cnprog * cnrows;
+
   // embarassingly parallel!
   // sweep blocksize, done this way to reduce stack allocs
   #define BLOCKSIZE 32
-  uint64_t points = n_progs * n_rows;
-
   #pragma omp parallel for schedule(guided)
   for (uint64_t itr = 0; itr < points; itr+=BLOCKSIZE) {
-    stack<float, MaxSize> eval_stack;
+    stack<float, MAX_STACK_SIZE> eval_stack;
     for (uint64_t subitr = itr;
          subitr < itr+BLOCKSIZE && subitr < points;
          subitr++) {
-      uint64_t pid = subitr / n_rows;
-      uint64_t row_id = subitr % n_rows;
+      uint64_t pid = subitr / cnrows;
+      uint64_t row_id = subitr % cnrows;
       program_t curr_p = d_progs + pid; // Current program
 
       int end = curr_p->len - 1;
@@ -49,14 +51,14 @@ void execute_kernel(const program_t d_progs, const float *data, float *y_pred,
           if (ar > 1)
             in[1] = eval_stack.pop();
         }
-        res = detail::evaluate_node(*curr_node, data, n_rows, row_id, in);
+        res = detail::evaluate_node(*curr_node, data, cnrows, row_id, in);
         eval_stack.push(res);
         curr_node--;
         end--;
       }
 
       // Outputs stored in col-major format
-      y_pred[pid * n_rows + row_id] = eval_stack.pop();
+      y_pred[pid * cnrows + row_id] = eval_stack.pop();
       eval_stack.flush();
     }
   }
@@ -109,12 +111,6 @@ void compute_metric(int n_rows, int n_progs, const float *y,
   } else {
     // This should not be reachable
   }
-}
-
-void execute(const program_t &d_progs, const int n_rows, const int n_progs,
-             const float *data, float *y_pred) {
-  execute_kernel(d_progs, data, y_pred, static_cast<uint64_t>(n_rows),
-                 static_cast<uint64_t>(n_progs));
 }
 
 void find_fitness(program_t d_prog, float *score, const param &params,
