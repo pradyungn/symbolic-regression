@@ -22,7 +22,7 @@ case $1 in
     ;;
 
     "square")
-         COMMAND="./genetic_benchmark square-wave > square-ref.rkt"
+         COMMAND="./genetic_benchmark square-wave"
     ;;
 
     *)

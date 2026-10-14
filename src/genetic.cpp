@@ -15,6 +15,7 @@
 #include <random>
 #include <stack>
 #include <sstream>
+#include <stdexcept>
 namespace genetic {
 
 /**
@@ -174,6 +175,7 @@ void cpp_evolve(const std::vector<program> &h_oldprogs,
         h_nextprogs[pos] = h_oldprogs[parent_index];
       } else {
         // Should not come here
+        throw std::runtime_error("[err] donor program not received");
       }
     }
   }

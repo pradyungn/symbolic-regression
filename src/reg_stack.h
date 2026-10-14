@@ -78,7 +78,7 @@ template <typename DataT, int MaxSize> struct stack {
     return DataT(0);
   }
 
-  void flush() { elements_ = 0; }
+  inline void flush() { elements_ = 0; }
 
 private:
   int elements_;

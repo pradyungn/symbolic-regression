@@ -26,33 +26,37 @@ void execute(const program_t &d_progs, const int n_rows,
   uint64_t points = cnprog * cnrows;
 
   // embarassingly parallel!
-  #pragma omp parallel for collapse(2) schedule(guided)
-  for (uint64_t pid = 0; pid < cnprog; pid++) {
-    for (uint64_t row_id = 0; row_id < cnrows; row_id++) {
-      stack<float, MAX_STACK_SIZE-1> eval_stack;
-      program_t curr_p = d_progs + pid; // Current program
+  #pragma omp parallel
+  {
+    stack<float, MAX_STACK_SIZE-1> eval_stack;
+    #pragma omp for collapse(2) schedule(guided)
+    for (uint64_t pid = 0; pid < cnprog; pid++) {
+      for (uint64_t row_id = 0; row_id < cnrows; row_id++) {
+        program_t curr_p = d_progs + pid; // Current program
 
-      int end = curr_p->len - 1;
-      node *curr_node = curr_p->nodes + end;
+        int end = curr_p->len - 1;
+        node *curr_node = curr_p->nodes + end;
 
-      float res = 0.0f;
-      float in[2] = {0.0f, 0.0f}; // in[0] is mapped to top-of-stack
+        float res = 0.0f;
+        float in[2] = {0.0f, 0.0f}; // in[0] is mapped to top-of-stack
 
-      while (end >= 0) {
-        if (detail::is_nonterminal(curr_node->t)) {
-          int ar = detail::arity(curr_node->t);
-          if (ar > 1) in[1] = eval_stack.pop();
-        } else {
-          eval_stack.push(in[0]); // prevent clobber
+        while (end >= 0) {
+          if (detail::is_nonterminal(curr_node->t)) {
+            int ar = detail::arity(curr_node->t);
+            if (ar > 1) in[1] = eval_stack.pop();
+          } else {
+            eval_stack.push(in[0]); // prevent clobber
+          }
+
+          in[0] = detail::evaluate_node(*curr_node, data, cnrows, row_id, in);
+          curr_node--;
+          end--;
         }
 
-        in[0] = detail::evaluate_node(*curr_node, data, cnrows, row_id, in);
-        curr_node--;
-        end--;
+        // Outputs stored in col-major format
+        y_pred[pid * cnrows + row_id] = in[0];
+        eval_stack.flush();
       }
-
-      // Outputs stored in col-major format
-      y_pred[pid * cnrows + row_id] = in[0];
     }
   }
 }
