@@ -38,11 +38,18 @@ template <typename DataT, int MaxSize> struct stack {
    *       behavior.
    */
   void push(DataT val) {
+    // old code 
+    /*
     for (int i = MaxSize - 1; i >= 0; --i) {
       if (elements_ == i) {
         ++elements_;
         regs_[i] = val;
       }
+    }
+    */
+    if (elements_ <= MaxSize - 1) {
+      regs_[elements_] = val;
+      ++elements_;
     }
   }
 
@@ -58,11 +65,18 @@ template <typename DataT, int MaxSize> struct stack {
    *       to all sorts of incorrect behavior.
    */
   DataT pop() {
+    // old code
+    /*
     for (int i = 0; i < MaxSize; ++i) {
       if (elements_ == (i + 1)) {
         elements_--;
         return regs_[i];
       }
+    }
+    */
+    if (elements_ < MaxSize) {
+      elements_--;
+      return regs_[elements_];
     }
 
     return DataT(0);
