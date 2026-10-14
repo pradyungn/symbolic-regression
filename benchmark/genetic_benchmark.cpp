@@ -186,57 +186,64 @@ using namespace genetic;
 
 // MISNOMER: it just copies top two to front of array
 void insertionSortPrograms(genetic::program *programs, int size) {
-  // // set any nan values to +inf
-  // for (int i = 0; i < size; ++i) {
-  //   if (std::isnan(programs[i].raw_fitness_)) {
-  //     programs[i].raw_fitness_ = std::numeric_limits<float>::max();
-  //   }
-  // }
-
-  // // do insertion sort
-  // for (int i = 1; i < size; i++) {
-  //   genetic::program key(programs[i]);
-  //   int j = i - 1;
-
-  //   while (j >= 0 && (programs[j].raw_fitness_ > key.raw_fitness_)) {
-  //     programs[j + 1] = programs[j];
-  //     j--;
-  //   }
-  //   programs[j + 1] = key;
-  // }
-
-  // just pull the top two
-  if (size < 2) return;
-  program_t f, s;
-  float rf, rs;
-
-  f = &(programs[0]);
-  s = &(programs[1]);
-
-  rf = std::fmin(f->raw_fitness_, std::numeric_limits<float>::max());
-  rs = std::fmin(s->raw_fitness_, std::numeric_limits<float>::max());
-
-  if (rf > rs) {
-    std::swap(f, s);
-    std::swap(rf, rs);
-  }
-
-  for (int i=2; i < size; i++) {
-    if (std::isnan(programs[i].raw_fitness_)) continue;
-    if (programs[i].raw_fitness_ < rs) {
-      s = &(programs[i]);
-      rs = s -> raw_fitness_;
-
-      if (rf > rs) {
-        std::swap(f, s);
-        std::swap(rf, rs);
-      }
+  // set any nan values to +inf
+  for (int i = 0; i < size; ++i) {
+    if (std::isnan(programs[i].raw_fitness_)) {
+      programs[i].raw_fitness_ = std::numeric_limits<float>::max();
     }
   }
 
-  const auto tmps(*s);
-  programs[0] = *f;
-  programs[1] = tmps;
+  // do insertion sort
+  for (int i = 1; i < size; i++) {
+    genetic::program key(programs[i]);
+    int j = i - 1;
+
+    while (j >= 0 && (programs[j].raw_fitness_ > key.raw_fitness_)) {
+      programs[j + 1] = programs[j];
+      j--;
+    }
+    programs[j + 1] = key;
+  }
+
+  // // just pull the top two
+  // if (size == 0) return;
+
+  // program_t f, s;
+  // float rf, rs;
+
+  // f = &(programs[0]);
+  // if (std::isnan(f->raw_fitness_))
+  //   f->raw_fitness_ = std::numeric_limits<float>::max();
+
+  // if (size < 2) return;
+  // s = &(programs[1]);
+  // if (std::isnan(s->raw_fitness_))
+  //   s->raw_fitness_ = std::numeric_limits<float>::max();
+
+  // rf = f->raw_fitness_;
+  // rs = s->raw_fitness_;
+
+  // if (rf > rs) {
+  //   std::swap(f, s);
+  //   std::swap(rf, rs);
+  // }
+
+  // for (int i=2; i < size; i++) {
+  //   if (std::isnan(programs[i].raw_fitness_)) continue;
+  //   if (programs[i].raw_fitness_ < rs) {
+  //     s = &(programs[i]);
+  //     rs = s -> raw_fitness_;
+
+  //     if (rf > rs) {
+  //       std::swap(f, s);
+  //       std::swap(rf, rs);
+  //     }
+  //   }
+  // }
+
+  // const auto tmps(*s);
+  // programs[0] = *f;
+  // programs[1] = tmps;
 }
 
 void run_symbolic_regression(const std::string &dataset_file) {

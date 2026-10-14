@@ -29,6 +29,7 @@ void execute(const program_t &d_progs, const int n_rows,
   #pragma omp parallel
   {
     stack<float, MAX_STACK_SIZE-1> eval_stack;
+
     #pragma omp for collapse(2) schedule(guided)
     for (uint64_t pid = 0; pid < cnprog; pid++) {
       for (uint64_t row_id = 0; row_id < cnrows; row_id++) {

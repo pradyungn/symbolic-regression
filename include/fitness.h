@@ -234,7 +234,8 @@ void meanSquareError(const uint64_t n_samples, const uint64_t n_progs,
                      const math_t *Y, const math_t *Y_pred, const math_t *W,
                      math_t *out) {
 
-  std::vector<math_t> error(n_samples * n_progs);
+
+  // *huge* array -- not actually needed...
   math_t N = static_cast<math_t>(n_samples);
 
   // Weight Sum
@@ -245,18 +246,25 @@ void meanSquareError(const uint64_t n_samples, const uint64_t n_progs,
 
   // Compute absolute differences
   for (uint64_t pid = 0; pid < n_progs; ++pid) {
-    for (uint64_t i = 0; i < n_samples; ++i) {
-      error[pid * n_samples + i] = N * W[i] *
-                                   (Y_pred[pid * n_samples + i] - Y[i]) *
-                                   (Y_pred[pid * n_samples + i] - Y[i]) / WS;
+    float runsum[8] = { 0.0f };
+    for (uint64_t i = 0; i+7 < n_samples; i+=8) {
+      // infer AVX intrinsics here w/o giant array
+      for (uint64_t lane=0; lane < 8; lane++) {
+        runsum[lane] += N * W[i + lane] *
+          (Y_pred[pid * n_samples + i + lane] - Y[i + lane]) *
+          (Y_pred[pid * n_samples + i + lane] - Y[i + lane]) / WS;
+      }
     }
-  }
 
-  // Average along rows
-  for (uint64_t pid = 0; pid < n_progs; ++pid) {
+    for (uint64_t i=n_samples-1; (i % 8) != 7; i--) {
+      runsum[i%8] += N * W[i] *
+        (Y_pred[pid * n_samples + i] - Y[i]) *
+        (Y_pred[pid * n_samples + i] - Y[i]) / WS;
+    }
+
     out[pid] = static_cast<math_t>(0);
-    for (uint64_t i = 0; i < n_samples; ++i) {
-      out[pid] += error[pid * n_samples + i] / N;
+    for (uint64_t i = 0; i < 8; ++i) {
+      out [pid] += runsum[i] / N;
     }
   }
 }

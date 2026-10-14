@@ -34,7 +34,7 @@ esac
 if [ "$#" -eq 2 ]; then
     $COMMAND
 else
-    perf record -e cycles:u -g -- $COMMAND
-    perf script > perfs.out
+    perf record -e cycles:u -g -F 199 --call-graph dwarf,32768 -- $COMMAND
+    perf script --inline > perfs.out
     cat perfs.out | ./$FGPATH/stackcollapse-perf.pl | ./$FGPATH/flamegraph.pl --colors=js > $1.svg
 fi
