@@ -11,6 +11,7 @@ One-shot runtimes, so can be noisy.
 | change sort to runmin |    2.227 |  21.93 |  27.295 |    57.8 |          |
 | actually add O3       |   0.4916 |  7.963 |   7.015 |   15.67 |          |
 | remove exkern indir   |   0.3814 |  7.762 |    6.74 |   15.21 |          |
+| buffer top of stack   |   0.3699 |  7.778 |   6.376 |   15.03 |          |
 
 After OMP, reduction on Cancer was /not linear/ -- something weird may be going on with our parallelism. check flame graph to see where the overhead goes! 
 

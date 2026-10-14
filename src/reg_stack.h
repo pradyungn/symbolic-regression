@@ -34,7 +34,7 @@ template <typename DataT, int MaxSize> struct stack {
    *       behavior.
    */
   void push(DataT val) {
-    // old code 
+    // old code
     /*
     for (int i = MaxSize - 1; i >= 0; --i) {
       if (elements_ == i) {

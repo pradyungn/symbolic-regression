@@ -30,7 +30,7 @@ void execute(const program_t &d_progs, const int n_rows,
   #define BLOCKSIZE 32
   #pragma omp parallel for schedule(guided)
   for (uint64_t itr = 0; itr < points; itr+=BLOCKSIZE) {
-    stack<float, MAX_STACK_SIZE> eval_stack;
+    stack<float, MAX_STACK_SIZE-1> eval_stack;
     for (uint64_t subitr = itr;
          subitr < itr+BLOCKSIZE && subitr < points;
          subitr++) {
@@ -42,23 +42,23 @@ void execute(const program_t &d_progs, const int n_rows,
       node *curr_node = curr_p->nodes + end;
 
       float res = 0.0f;
-      float in[2] = {0.0f, 0.0f};
+      float in[2] = {0.0f, 0.0f}; // in[0] is mapped to top-of-stack
 
       while (end >= 0) {
         if (detail::is_nonterminal(curr_node->t)) {
           int ar = detail::arity(curr_node->t);
-          in[0] = eval_stack.pop(); // Min arity of function is 1
-          if (ar > 1)
-            in[1] = eval_stack.pop();
+          if (ar > 1) in[1] = eval_stack.pop();
+        } else {
+          eval_stack.push(in[0]); // prevent clobber
         }
-        res = detail::evaluate_node(*curr_node, data, cnrows, row_id, in);
-        eval_stack.push(res);
+
+        in[0] = detail::evaluate_node(*curr_node, data, cnrows, row_id, in);
         curr_node--;
         end--;
       }
 
       // Outputs stored in col-major format
-      y_pred[pid * cnrows + row_id] = eval_stack.pop();
+      y_pred[pid * cnrows + row_id] = in[0];
       eval_stack.flush();
     }
   }
