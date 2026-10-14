@@ -184,25 +184,59 @@ float accuracy(const std::vector<float> &y_true,
 
 using namespace genetic;
 
+// MISNOMER: it just copies top two to front of array
 void insertionSortPrograms(genetic::program *programs, int size) {
-  // set any nan values to +inf
-  for (int i = 0; i < size; ++i) {
-    if (std::isnan(programs[i].raw_fitness_)) {
-      programs[i].raw_fitness_ = std::numeric_limits<float>::max();
+  // // set any nan values to +inf
+  // for (int i = 0; i < size; ++i) {
+  //   if (std::isnan(programs[i].raw_fitness_)) {
+  //     programs[i].raw_fitness_ = std::numeric_limits<float>::max();
+  //   }
+  // }
+
+  // // do insertion sort
+  // for (int i = 1; i < size; i++) {
+  //   genetic::program key(programs[i]);
+  //   int j = i - 1;
+
+  //   while (j >= 0 && (programs[j].raw_fitness_ > key.raw_fitness_)) {
+  //     programs[j + 1] = programs[j];
+  //     j--;
+  //   }
+  //   programs[j + 1] = key;
+  // }
+
+  // just pull the top two
+  if (size < 2) return;
+  program_t f, s;
+  float rf, rs;
+
+  f = &(programs[0]);
+  s = &(programs[1]);
+
+  rf = std::fmin(f->raw_fitness_, std::numeric_limits<float>::max());
+  rs = std::fmin(s->raw_fitness_, std::numeric_limits<float>::max());
+
+  if (rf > rs) {
+    std::swap(f, s);
+    std::swap(rf, rs);
+  }
+
+  for (int i=2; i < size; i++) {
+    if (std::isnan(programs[i].raw_fitness_)) continue;
+    if (programs[i].raw_fitness_ < rs) {
+      s = &(programs[i]);
+      rs = s -> raw_fitness_;
+
+      if (rf > rs) {
+        std::swap(f, s);
+        std::swap(rf, rs);
+      }
     }
   }
 
-  // do insertion sort
-  for (int i = 1; i < size; i++) {
-    genetic::program key(programs[i]);
-    int j = i - 1;
-
-    while (j >= 0 && (programs[j].raw_fitness_ > key.raw_fitness_)) {
-      programs[j + 1] = programs[j];
-      j--;
-    }
-    programs[j + 1] = key;
-  }
+  const auto tmps(*s);
+  programs[0] = *f;
+  programs[1] = tmps;
 }
 
 void run_symbolic_regression(const std::string &dataset_file) {
@@ -300,7 +334,6 @@ void run_symbolic_regression(const std::string &dataset_file) {
   std::vector<float> y_pred1(X_test.size());
   genetic::symRegPredict(X_test_flat.data(), X_test.size(), &final_programs[0],
                          y_pred1.data());
-
   std::vector<float> y_pred2(X_test.size());
   genetic::symRegPredict(X_test_flat.data(), X_test.size(), &final_programs[1],
                          y_pred2.data());
@@ -444,7 +477,6 @@ void run_symbolic_classification(const std::string &dataset_file) {
   std::vector<float> y_pred1(X_test.size());
   genetic::symClfPredict(X_test_flat.data(), X_test.size(), params,
                          &final_programs[0], y_pred1.data());
-
   std::vector<float> y_pred2(X_test.size());
   genetic::symClfPredict(X_test_flat.data(), X_test.size(), params,
                          &final_programs[1], y_pred2.data());
@@ -595,6 +627,7 @@ void run_symbolic_reconstruction(const std::string &png_file, int K) {
       genetic::symFit(X_train_flat.data(), y_train.data(),
                       sample_weights.data(), X_train.size(),
                       params.num_features, params, final_programs, history);
+
       insertionSortPrograms(final_programs, params.population_size);
       genetic::program_t best_program = &final_programs[0];
 

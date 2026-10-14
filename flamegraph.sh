@@ -18,7 +18,7 @@ case $1 in
     ;;
 
     "silk")
-         COMMAND="./genetic_benchmark silk-wave > silk-ref.rkt"
+         COMMAND="./genetic_benchmark silk-wave"
     ;;
 
     "square")

@@ -4,9 +4,12 @@ One-shot runtimes, so can be noisy.
 
 | Optimization          | Diabetes | Cancer | Housing |    Silk | Square   |
 |-----------------------+----------+--------+---------+---------+----------|
-| Baseline              |      ??? |        |         |         |          |
+| Baseline              |      ??? |        |         | 225.985 |          |
 | Stack Opt (pre-fix)   |     7.84 |  65.08 |  96.583 | 172.072 | too long |
 | Hoist Stack Creation  |    7.605 |  60.43 |  90.872 |         |          |
-| OMP Parallel in kexec |    2.349 | 34.435 |  28.022 |         |          |
+| OMP Parallel in kexec |    2.349 | 34.435 |  28.022 |   58.36 |          |
+| change sort to runmin |    2.227 |  21.93 |  27.295 |    57.8 |          |
 
-Reduction on Cancer was /not linear/ -- something weird may be going on with our parallelism. check flame graph to see where the overhead goes!
+After OMP, reduction on Cancer was /not linear/ -- something weird may be going on with our parallelism. check flame graph to see where the overhead goes! 
+
+/Update/: The above was because of insertion sort. Changing it to a simple running minimum gets us to an almost 3x reduction.
