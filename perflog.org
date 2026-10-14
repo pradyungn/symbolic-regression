@@ -16,6 +16,7 @@ Mostly one-shot runtimes, so can be noisy. Multi-shot done to reduce sub-second 
 | flto                            |    0.325 |  6.967 |   5.734 |    12.3 |    36.49 |
 | ffastmath+march=native          |    0.309 |  3.444 |   5.343 |    11.4 |    33.55 |
 | vectorize & remove array in MSE |    0.312 |  3.449 |   4.998 |   6.809 |    21.38 |
+| OMP parallelize logLoss         |     0.31 |  3.166 |   4.991 |   6.835 |   21.507 |
 
 After OMP, reduction on Cancer was /not linear/ -- something weird may be going on with our parallelism. check flame graph to see where the overhead goes! 
 
@@ -26,3 +27,5 @@ We tried reducing the size of the type field in =node= to 8 bits and making the 
 We ran the program without multithreading to better undrestand the TMA behavior. Retiring typically looks good, with the second-strongest category being frontend bound. This may be due to program size being too large to fit in the L1I cache.
 
 Valgrind cannot be used on the VMs if =march=native= is used as a GCC flag. We temporarily disabled it to test memory behavior.
+
+Between the vectorization of =MSE= and =logLoss= parallelization, we realized that =-ffast-math= turns on =-ffinite-math-only=, which prevents NaNs from being handled correctly. Though we did not observe adverse effects, to be safe we turned that specific flag off. Most of the improvements on =cancer= were earned back with the multithreading of that calculation. Turning this flag off minimally impacted the other testcases.
