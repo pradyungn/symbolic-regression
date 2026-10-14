@@ -26,16 +26,10 @@ void execute(const program_t &d_progs, const int n_rows,
   uint64_t points = cnprog * cnrows;
 
   // embarassingly parallel!
-  // sweep blocksize, done this way to reduce stack allocs
-  #define BLOCKSIZE 32
-  #pragma omp parallel for schedule(guided)
-  for (uint64_t itr = 0; itr < points; itr+=BLOCKSIZE) {
-    stack<float, MAX_STACK_SIZE-1> eval_stack;
-    for (uint64_t subitr = itr;
-         subitr < itr+BLOCKSIZE && subitr < points;
-         subitr++) {
-      uint64_t pid = subitr / cnrows;
-      uint64_t row_id = subitr % cnrows;
+  #pragma omp parallel for collapse(2) schedule(guided)
+  for (uint64_t pid = 0; pid < cnprog; pid++) {
+    for (uint64_t row_id = 0; row_id < cnrows; row_id++) {
+      stack<float, MAX_STACK_SIZE-1> eval_stack;
       program_t curr_p = d_progs + pid; // Current program
 
       int end = curr_p->len - 1;
@@ -59,7 +53,6 @@ void execute(const program_t &d_progs, const int n_rows,
 
       // Outputs stored in col-major format
       y_pred[pid * cnrows + row_id] = in[0];
-      eval_stack.flush();
     }
   }
 }
