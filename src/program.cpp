@@ -76,6 +76,8 @@ program::program(const program &src)
 }
 
 program &program::operator=(const program &src) {
+  if (this == &src) return *this;
+
   len = src.len;
   depth = src.depth;
   raw_fitness_ = src.raw_fitness_;
