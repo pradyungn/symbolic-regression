@@ -21,9 +21,19 @@ namespace genetic {
 template <int MaxSize = MAX_STACK_SIZE>
 void execute_kernel(const program_t d_progs, const float *data, float *y_pred,
                     const uint64_t n_rows, const uint64_t n_progs) {
-  stack<float, MaxSize> eval_stack;
-  for (uint64_t pid = 0; pid < n_progs; ++pid) {
-    for (uint64_t row_id = 0; row_id < n_rows; ++row_id) {
+  // embarassingly parallel!
+  // sweep blocksize, done this way to reduce stack allocs
+  #define BLOCKSIZE 32
+  uint64_t points = n_progs * n_rows;
+
+  #pragma omp parallel for schedule(guided)
+  for (uint64_t itr = 0; itr < points; itr+=BLOCKSIZE) {
+    stack<float, MaxSize> eval_stack;
+    for (uint64_t subitr = itr;
+         subitr < itr+BLOCKSIZE && subitr < points;
+         subitr++) {
+      uint64_t pid = subitr / n_rows;
+      uint64_t row_id = subitr % n_rows;
       program_t curr_p = d_progs + pid; // Current program
 
       int end = curr_p->len - 1;

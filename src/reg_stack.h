@@ -70,7 +70,7 @@ template <typename DataT, int MaxSize> struct stack {
       }
     }
     */
-    if (elements_ < MaxSize) {
+    if (elements_ > 0) {
       elements_--;
       return regs_[elements_];
     }
