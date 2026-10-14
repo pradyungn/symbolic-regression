@@ -12,11 +12,7 @@ namespace genetic {
  * @tparam MaxSize max capacity of the stack
  */
 template <typename DataT, int MaxSize> struct stack {
-  explicit stack() : elements_(0) {
-    for (int i = 0; i < MaxSize; ++i) {
-      regs_[i] = DataT(0);
-    }
-  }
+  explicit stack() : elements_(0) {}
 
   /** Checks if the stack is empty */
   bool empty() const { return elements_ == 0; }
@@ -81,6 +77,8 @@ template <typename DataT, int MaxSize> struct stack {
 
     return DataT(0);
   }
+
+  void flush() { elements_ = 0; }
 
 private:
   int elements_;
