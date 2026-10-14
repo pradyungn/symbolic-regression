@@ -1,0 +1,8 @@
+#+title: Optimization of Symbolic Regression
+
+One-shot runtimes, so can be noisy.
+
+| Optimization | Diabetes | Cancer | Housing |    Silk | Square   |
+|--------------+----------+--------+---------+---------+----------|
+| Baseline     | ???      |        |         |         |          |
+| Stack Opt    | 7.84     |  65.08 |  96.583 | 172.072 | too long |
