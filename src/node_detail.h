@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <node.h>
+#include <vector>
+#include <iostream>
 
 namespace genetic {
 namespace detail {
@@ -110,6 +112,137 @@ inline float evaluate_node(const node &n, const float *data, const uint64_t stri
     default:
       return 0.f;
     };
+  }
+}
+
+// `data` assumed to be stored in col-major format
+inline std::vector<float> looped_evaluate_node(const node &n, const float* data, const uint64_t stride,
+                                               const uint64_t offset, const uint64_t rowsize,
+                                               const std::vector<float> &in1, const std::vector<float> &in2) {
+  if (n.t == node::type::constant) {
+    return std::vector<float>(rowsize, n.u.val);
+  } else if (n.t == node::type::variable) {
+    return std::vector<float>(data + (stride*n.u.fid) + offset,
+                              data + (stride*n.u.fid) + offset + rowsize);
+  } else {
+    auto nodetype = n.t;
+    std::vector<float> results(rowsize); // could reuse in1, but this improves vectorization
+
+    // note: keep the case statements in alphabetical order under each category
+    // of operators.
+    for (uint64_t itr=0; itr<rowsize; itr++) {
+      // note: keep the case statements in alphabetical order under each category
+      // of operators.
+      switch (nodetype) {
+      // binary operators
+      case node::type::add:
+        results[itr] = in1[itr] + in2[itr];
+        break;
+      case node::type::atan2:
+        results[itr] = atan2f(in1[itr], in2[itr]);
+        break;
+      case node::type::div:
+        results[itr] = fabsf(in2[itr]) < MIN_VAL ? 1.0f : (in1[itr]/in2[itr]);//fdividef(in1[itr], in2[itr]);
+        break;
+      case node::type::fdim:
+        results[itr] = fdimf(in1[itr], in2[itr]);
+        break;
+      case node::type::gt:
+        results[itr] = in1[itr] > in2[itr] ? 1.0f : 0.0f;
+        break;
+      case node::type::max:
+        results[itr] = fmaxf(in1[itr], in2[itr]);
+        break;
+      case node::type::min:
+        results[itr] = fminf(in1[itr], in2[itr]);
+        break;
+      case node::type::mul:
+        results[itr] = in1[itr] * in2[itr];
+        break;
+      case node::type::pow:
+        results[itr] = powf(in1[itr], in2[itr]);
+        break;
+      case node::type::sub:
+        results[itr] = in1[itr] - in2[itr];
+        break;
+
+        // unary operators
+      case node::type::abs:
+        results[itr] = fabsf(in1[itr]);
+        break;
+      case node::type::acos:
+        results[itr] = acosf(in1[itr]);
+        break;
+      case node::type::acosh:
+        results[itr] = acoshf(in1[itr]);
+        break;
+      case node::type::asin:
+        results[itr] = asinf(in1[itr]);
+        break;
+      case node::type::asinh:
+        results[itr] = asinhf(in1[itr]);
+        break;
+      case node::type::atan:
+        results[itr] = atanf(in1[itr]);
+        break;
+      case node::type::atanh:
+        results[itr] = atanhf(in1[itr]);
+        break;
+      case node::type::cbrt:
+        results[itr] = cbrtf(in1[itr]);
+        break;
+      case node::type::cos:
+        results[itr] = cosf(in1[itr]);
+        break;
+      case node::type::cosh:
+        results[itr] = coshf(in1[itr]);
+        break;
+      case node::type::cube:
+        results[itr] = in1[itr] * in1[itr] * in1[itr];
+        break;
+      case node::type::exp:
+        results[itr] = expf(in1[itr]);
+        break;
+      case node::type::inv:
+        results[itr] = fabsf(in1[itr]) < MIN_VAL ? 0.f : 1.f / in1[itr];
+        break;
+      case node::type::log:
+        results[itr] = fabsf(in1[itr]) < MIN_VAL ? 0.f : logf(fabsf(in1[itr]));
+        break;
+      case node::type::neg:
+        results[itr] = -in1[itr];
+        break;
+      case node::type::rcbrt:
+        results[itr] = static_cast<float>(1.0) / cbrtf(in1[itr]);
+        break;
+      case node::type::rsqrt:
+        results[itr] = static_cast<float>(1.0) / sqrtf(fabsf(in1[itr]));
+        break;
+      case node::type::sin:
+        results[itr] = sinf(in1[itr]);
+        break;
+      case node::type::sinh:
+        results[itr] = sinhf(in1[itr]);
+        break;
+      case node::type::sq:
+        results[itr] = in1[itr] * in1[itr];
+        break;
+      case node::type::sqrt:
+        results[itr] = sqrtf(fabsf(in1[itr]));
+        break;
+      case node::type::tan:
+        results[itr] = tanf(in1[itr]);
+        break;
+      case node::type::tanh:
+        results[itr] = tanhf(in1[itr]);
+        break;
+      // shouldn't reach here!
+      default:
+        results[itr] = 0.f;
+      };
+    }
+
+    return results;
   }
 }
 
