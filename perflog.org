@@ -29,3 +29,5 @@ We ran the program without multithreading to better undrestand the TMA behavior.
 Valgrind cannot be used on the VMs if =march=native= is used as a GCC flag. We temporarily disabled it to test memory behavior.
 
 Between the vectorization of =MSE= and =logLoss= parallelization, we realized that =-ffast-math= turns on =-ffinite-math-only=, which prevents NaNs from being handled correctly. Though we did not observe adverse effects, to be safe we turned that specific flag off. Most of the improvements on =cancer= were earned back with the multithreading of that calculation. Turning this flag off minimally impacted the other testcases.
+
+We initially tried to do a similar multithreading on MSE computation, but realized that vector intrinsics alone were faster, likely due to the overhead of thread fork/joins.
