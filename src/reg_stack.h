@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 
 namespace genetic {
 
@@ -75,10 +76,16 @@ template <typename DataT, int MaxSize> struct stack {
       return regs_[elements_];
     }
 
-    return DataT(0);
+    throw std::runtime_error("[err] stack underflow");
   }
 
   inline void flush() { elements_ = 0; }
+  inline void drain(std::vector<DataT> &funnel) {
+    for (int i=0; i<elements_; i++) {
+      funnel.push_back(std::move(regs_[elements_]));
+    }
+    elements_ = 0;
+  }
 
 private:
   int elements_;
