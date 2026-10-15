@@ -1,22 +1,24 @@
 #+title: Optimization of Symbolic Regression
 Mostly one-shot runtimes, so can be noisy. Multi-shot done to reduce sub-second variance later on. Overhead of =perf= can also increase runtimes.
 
-| Optimization                    | Diabetes | Cancer | Housing |    Silk |   Square |
-|---------------------------------+----------+--------+---------+---------+----------|
-| Baseline                        |      ??? |        |         | 225.985 |          |
-| Stack Opt (pre-fix)             |     7.84 |  65.08 |  96.583 | 172.072 | too long |
-| Hoist Stack Creation            |    7.605 |  60.43 |  90.872 |         |          |
-| OMP Parallel in kexec           |    2.349 | 34.435 |  28.022 |   58.36 |          |
-| change sort to runmin           |    2.227 |  21.93 |  27.295 |    57.8 |          |
-| actually add O3                 |   0.4916 |  7.963 |   7.015 |   15.67 |          |
-| remove indir to kexec           |   0.3814 |  7.762 |    6.74 |   15.21 |          |
-| buffer top of stack             |   0.3699 |  7.778 |   6.376 |   15.03 |          |
-| dehoist stack, omp collapse     |    0.340 |    7.3 |   5.767 |   12.05 |    38.81 |
-| re-hoist stack, split pragma    |    0.335 |  7.237 |   5.716 |   12.15 |   38.684 |
-| flto                            |    0.325 |  6.967 |   5.734 |    12.3 |    36.49 |
-| ffastmath+march=native          |    0.309 |  3.444 |   5.343 |    11.4 |    33.55 |
-| vectorize & remove array in MSE |    0.312 |  3.449 |   4.998 |   6.809 |    21.38 |
-| OMP parallelize logLoss         |     0.31 |  3.166 |   4.991 |   6.835 |   21.507 |
+| Optimization                         | Diabetes | Cancer | Housing |    Silk |   Square |
+|--------------------------------------+----------+--------+---------+---------+----------|
+| Baseline                             |      ??? |        |         | 225.985 |          |
+| Stack Opt (pre-fix)                  |     7.84 |  65.08 |  96.583 | 172.072 | too long |
+| Hoist Stack Creation                 |    7.605 |  60.43 |  90.872 |         |          |
+| OMP Parallel in kexec                |    2.349 | 34.435 |  28.022 |   58.36 |          |
+| change sort to runmin                |    2.227 |  21.93 |  27.295 |    57.8 |          |
+| actually add O3                      |   0.4916 |  7.963 |   7.015 |   15.67 |          |
+| remove indir to kexec                |   0.3814 |  7.762 |    6.74 |   15.21 |          |
+| buffer top of stack                  |   0.3699 |  7.778 |   6.376 |   15.03 |          |
+| dehoist stack, omp collapse          |    0.340 |    7.3 |   5.767 |   12.05 |    38.81 |
+| re-hoist stack, split pragma         |    0.335 |  7.237 |   5.716 |   12.15 |   38.684 |
+| flto                                 |    0.325 |  6.967 |   5.734 |    12.3 |    36.49 |
+| ffastmath+march=native               |    0.309 |  3.444 |   5.343 |    11.4 |    33.55 |
+| vectorize & remove array in MSE      |    0.312 |  3.449 |   4.998 |   6.809 |    21.38 |
+| OMP parallelize logLoss              |     0.31 |  3.166 |   4.991 |   6.835 |   21.507 |
+| switch loop stationarity in exec     |    0.193 |  2.078 |   3.256 |   3.089 |    9.487 |
+| disable -fno-finite-math-only (test) |    0.092 |  1.001 |   1.207 |   1.692 |    4.754 |
 
 After OMP, reduction on Cancer was /not linear/ -- something weird may be going on with our parallelism. check flame graph to see where the overhead goes! 
 
@@ -31,3 +33,5 @@ Valgrind cannot be used on the VMs if =march=native= is used as a GCC flag. We t
 Between the vectorization of =MSE= and =logLoss= parallelization, we realized that =-ffast-math= turns on =-ffinite-math-only=, which prevents NaNs from being handled correctly. Though we did not observe adverse effects, to be safe we turned that specific flag off. Most of the improvements on =cancer= were earned back with the multithreading of that calculation. Turning this flag off minimally impacted the other testcases.
 
 We initially tried to do a similar multithreading on MSE computation, but realized that vector intrinsics alone were faster, likely due to the overhead of thread fork/joins.
+
+After our final optimization, swapping loop stationarity, we disabled =-fno-finite-math-only= to test our "maximum unsafe performance". Doing so leads to massive speed increases across the different testcases, with no big differences in output across most of them. We did notice that on =cancer= specifically, disabling this flag led to our solver finding a /better/ solution. It's unclear whether this is a floating point arithmetic error or genuinely a better program, but we reiterate that enabling =-ffast-math= without disabling this flag can lead to correctness errors on untested inputs.
