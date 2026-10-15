@@ -25,6 +25,210 @@ void execute(const program_t &d_progs, const int n_rows,
 
   uint64_t points = cnprog * cnrows;
 
+  constexpr int BLOCK = 256;
+  static constexpr float MIN_VAL = 0.001f;
+
+  // embarassingly parallel!
+  #pragma omp parallel
+  {
+    alignas(64) float eval_stack[MAX_STACK_SIZE][BLOCK];
+    uint64_t num_blks = (cnrows + BLOCK - 1 ) / BLOCK;
+
+    #pragma omp for collapse(2) schedule(guided)
+    for (uint64_t pid = 0; pid < cnprog; pid++) {
+      for (uint64_t b = 0; b < num_blks; b++) {
+        program_t curr_p = d_progs + pid;
+        uint64_t start_row = b * BLOCK;
+        int rows_in_b = (int)std::min<uint64_t>(BLOCK, cnrows - start_row);
+        int sp = 0;
+
+        int end = curr_p->len - 1;
+        node *curr_node = curr_p->nodes + end;
+        
+        while (end >= 0) {
+          if (curr_node->t == node::type::constant) {
+            std::fill(eval_stack[sp], eval_stack[sp] + rows_in_b, curr_node->u.val);
+            sp++;
+          } else if (curr_node->t == node::type::variable) {
+            const float *col = data + cnrows * curr_node->u.fid + start_row;
+            std::copy(col, col + rows_in_b, eval_stack[sp]);
+            sp++;
+          } else {
+            float *a = eval_stack[sp - 1];
+            float *b = eval_stack[sp - 2];
+            switch(curr_node->t) {
+              // binary
+              case node::type::add: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = a[r] + b[r];
+                sp--;
+                break;
+              }
+              case node::type::atan2: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = atan2f(a[r], b[r]);
+                sp--;
+                break;
+              }
+              case node::type::div: {
+                for (int r = 0; r < rows_in_b; r++) {
+                  float q = a[r] / b[r];
+                  b[r] = fabsf(b[r]) < MIN_VAL ? 1.0f : q;
+                }
+                sp--;
+                break;
+              }
+              case node::type::fdim: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = fdimf(a[r], b[r]);
+                sp--;
+                break;
+              }
+              case node::type::gt: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = a[r] > b[r] ? 1.0f : 0.0f;
+                sp--;
+                break;
+              }
+              case node::type::max: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = fmaxf(a[r], b[r]);
+                sp--;
+                break;
+              }
+              case node::type::min: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = fminf(a[r], b[r]);
+                sp--;
+                break;
+              }
+              case node::type::mul: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = a[r] * b[r];
+                sp--;
+                break;
+              }
+              case node::type::pow: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = powf(a[r], b[r]);
+                sp--;
+                break;
+              }
+              case node::type::sub: {
+                for (int r = 0; r < rows_in_b; r++) b[r] = a[r] - b[r];
+                sp--;
+                break;
+              }
+              // unary
+              case node::type::abs: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = fabsf(a[r]);
+                break;
+              }
+              case node::type::acos: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = acosf(a[r]);
+                break;
+              }
+              case node::type::acosh: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = acoshf(a[r]);
+                break;
+              }
+              case node::type::asin: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = asinf(a[r]);
+                break;
+              }
+              case node::type::asinh: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = asinhf(a[r]);
+                break;
+              }
+              case node::type::atan: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = atanf(a[r]);
+                break;
+              }
+              case node::type::atanh: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = atanhf(a[r]);
+                break;
+              }
+              case node::type::cbrt: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = cbrtf(a[r]);
+                break;
+              }
+              case node::type::cos: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = cosf(a[r]);
+                break;
+              }
+              case node::type::cosh: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = coshf(a[r]);
+                break;
+              }
+              case node::type::cube: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = a[r] * a[r] * a[r];
+                break;
+              }
+              case node::type::exp: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = expf(a[r]);
+                break;
+              }
+              case node::type::inv: {
+                for (int r = 0; r < rows_in_b; r++) {
+                  float inv = 1.f / a[r];
+                  a[r] = fabsf(a[r]) < MIN_VAL ? 0.f : inv;
+                }
+                break;
+              }
+              case node::type::log: {
+                for (int r = 0; r < rows_in_b; r++) {
+                  auto ab = fabsf(a[r]);
+                  float log = logf(ab);
+                  a[r] = ab < MIN_VAL ? 0.f : log;
+                }
+                break;
+              }
+              case node::type::neg: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = -a[r];
+                break;
+              }
+              case node::type::rcbrt: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = static_cast<float>(1.0) / cbrtf(a[r]);
+                break;
+              }
+              case node::type::rsqrt: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = static_cast<float>(1.0) / sqrtf(fabsf(a[r]));
+                break;
+              }
+              case node::type::sin: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = sinf(a[r]);
+                break;
+              }
+              case node::type::sinh: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = sinhf(a[r]);
+                break;
+              }
+              case node::type::sq: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = a[r] * a[r];
+                break;
+              }
+              case node::type::sqrt: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = sqrtf(fabsf(a[r]));
+                break;
+              }
+              case node::type::tan: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = tanf(a[r]);
+                break;
+              }
+              case node::type::tanh: {
+                for (int r = 0; r < rows_in_b; r++) a[r] = tanhf(a[r]);
+                break;
+              }
+            }
+          }
+          curr_node--;
+          end--;
+        }
+        std::copy(eval_stack[0], eval_stack[0] + rows_in_b, y_pred + pid * cnrows + start_row);
+      }
+    }
+  }
+}
+ /*
+void execute(const program_t &d_progs, const int n_rows,
+            const int n_progs, const float *data, float *y_pred) {
+  uint64_t cnprog = static_cast<uint64_t>(n_progs);
+  uint64_t cnrows = static_cast<uint64_t>(n_rows);
+
+  uint64_t points = cnprog * cnrows;
+
   // embarassingly parallel!
   #pragma omp parallel
   {
@@ -61,6 +265,7 @@ void execute(const program_t &d_progs, const int n_rows,
     }
   }
 }
+*/
 
 program::program()
     : len(0), depth(0), raw_fitness_(0.0f), metric(metric_t::mse),
