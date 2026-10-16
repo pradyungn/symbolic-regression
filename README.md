@@ -1,3 +1,33 @@
+# 09-10 Cavs Artifact Instructions
+
+Standard compilation flow still holds (`make all` in the root of the repo) to build our artifact. The Dockerfile in `/docker` has been updated to reflect the image we used to test our project.
+
+We have provided a helper utility called `flamegraph.sh`. This can be used to run each of the different basic testcases discused in the README with their intended resolutions.
+
+To run the programs without a flamegraph, please run this command in the repo root:
+
+``` bash
+./flamegraph.sh [testcase] noperf
+```
+
+Where `testcase` is one of `diabetes`, `cancer`, `housing`, `silk` or `square`.
+
+To generate a flamegraph with the provided scripts, please clone the [FlameGraph](https://github.com/brendangregg/FlameGraph) repository into the same parent directory as this repo.
+
+You can then call the script as follows to run the testcase and generate a flamegraph in the root repo directory.
+Again, please only run this script from the repo root.
+
+``` bash
+./flamegraph.sh [testcase]
+```
+
+Note that FlameGraph generation utilizes the `perf` tool. Different systems may require different OS-level settings to be set to allow data collection.
+
+Everything beyond this line is boilerplate from the original repo.
+
+Performance numbers collected in our report and this repository all assume using a course-provisioned VM. Performance variation may be observed across different hosts.
+
+
 # 598APE-HW2
 
 This repository contains code for homework 2 of 598APE.
