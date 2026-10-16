@@ -245,6 +245,7 @@ void meanSquareError(const uint64_t n_samples, const uint64_t n_progs,
   }
 
   // Compute absolute differences
+  #pragma omp parallel for schedule(guided)
   for (uint64_t pid = 0; pid < n_progs; ++pid) {
     float runsum[8] = { 0.0f };
     for (uint64_t i = 0; i+7 < n_samples; i+=8) {
