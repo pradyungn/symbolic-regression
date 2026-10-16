@@ -82,7 +82,7 @@ template <typename DataT, int MaxSize> struct stack {
   inline void flush() { elements_ = 0; }
   inline void drain(std::vector<DataT> &funnel) {
     for (int i=0; i<elements_; i++) {
-      funnel.push_back(std::move(regs_[elements_]));
+      funnel.push_back(regs_[elements_]);
     }
     elements_ = 0;
   }

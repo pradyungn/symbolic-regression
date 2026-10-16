@@ -24,15 +24,13 @@ void execute(const program_t &d_progs, const int n_rows,
             const int n_progs, const float *data, float *y_pred) {
   uint64_t cnprog = static_cast<uint64_t>(n_progs);
   uint64_t cnrows = static_cast<uint64_t>(n_rows);
-
-  uint64_t points = cnprog * cnrows;
   uint64_t ROWSIZE = 256;
 
   // embarassingly parallel!
   #pragma omp parallel
   {
-    stack<std::vector<float>, MAX_STACK_SIZE-1> eval_stack;
-    std::vector<std::vector<float>> mempool;
+    stack<float*, MAX_STACK_SIZE-1> eval_stack;
+    std::vector<float*> mempool;
 
 
     #pragma omp for collapse(2) schedule(guided)
@@ -43,24 +41,23 @@ void execute(const program_t &d_progs, const int n_rows,
         int end = curr_p->len - 1;
         node *curr_node = curr_p->nodes + end;
 
-        float res = 0.0f;
-        std::vector<float> in1, in2;
+        float *in1 = NULL, *in2 = NULL;
 
         uint64_t crow = std::min(ROWSIZE, cnrows - row_id);
 
         while (end >= 0) {
           int ar = detail::arity(curr_node->t);
           if (detail::is_nonterminal(curr_node->t)) {
-            if (ar > 1) in2 = std::move(eval_stack.pop());
-          } else if (in1.size() > 0) { // prevent clobber if past first iter
-            eval_stack.push(std::move(in1));
+            if (ar > 1) in2 = eval_stack.pop();
+          } else if (in1 != NULL) { // prevent clobber if past first iter
+            eval_stack.push(in1);
           }
 
-          std::vector<float> out;
+          float* out;
           if (mempool.size() == 0) {
-            out.resize(ROWSIZE);
+            out = (float*)malloc(ROWSIZE*sizeof(float));
           } else {
-            out = std::move(mempool.back());
+            out = mempool.back();
             mempool.pop_back();
           }
 
@@ -69,24 +66,27 @@ void execute(const program_t &d_progs, const int n_rows,
 
           // free up in1 and in2
           if (detail::is_nonterminal(curr_node->t)) {
-            mempool.push_back(std::move(in1));
-            if (ar > 1) mempool.push_back(std::move(in2));
+            mempool.push_back(in1);
+            if (ar > 1) mempool.push_back(in2);
           }
 
           // out is the new input most likely
-          in1 = std::move(out);
+          in1 = out;
 
           curr_node--;
           end--;
         }
 
         // Outputs stored in col-major format
-        memcpy(&(y_pred[pid * cnrows + row_id]), in1.data(), sizeof(float)*crow);
+        memcpy(&(y_pred[pid * cnrows + row_id]), in1, sizeof(float)*crow);
 
-        mempool.push_back(std::move(in1));
+        mempool.push_back(in1);
         eval_stack.drain(mempool);
       }
     }
+
+    for (auto ptr: mempool)
+      free(ptr);
   }
 }
 

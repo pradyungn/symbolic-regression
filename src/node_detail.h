@@ -117,14 +117,14 @@ inline float evaluate_node(const node &n, const float *data, const uint64_t stri
 }
 
 // `data` assumed to be stored in col-major format
-inline void looped_evaluate_node(const node &n, const float* data, const uint64_t stride,
+inline void looped_evaluate_node(const node &n, const float* __restrict__ data, const uint64_t stride,
                                  const uint64_t offset, const uint64_t rowsize,
-                                 const std::vector<float> &in1, const std::vector<float> &in2,
-                                 std::vector<float> &results) {
+                                 const float* __restrict__ in1, const float* __restrict__ in2,
+                                 float* __restrict__ results) {
   if (n.t == node::type::constant) {
-    std::fill_n(results.begin(), rowsize, n.u.val);
+    std::fill_n(results, rowsize, n.u.val);
   } else if (n.t == node::type::variable) {
-    std::copy_n(data + (stride*n.u.fid) + offset, rowsize, results.begin());
+    std::copy_n(data + (stride*n.u.fid) + offset, rowsize, results);
   } else {
     auto nodetype = n.t;
 
